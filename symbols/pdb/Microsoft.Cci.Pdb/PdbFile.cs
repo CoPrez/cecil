@@ -20,10 +20,22 @@ namespace Microsoft.Cci.Pdb {
     {
     }
 
-    static void LoadGuidStream(BitAccess bits, out Guid doctype, out Guid language, out Guid vendor) {
+    static void LoadGuidStream(BitAccess bits, out Guid doctype, out Guid language, out Guid vendor, out Guid checksumAlgo, out byte[] checksum) {
+      int checksumSize;
+      int injectedSourceSize;
+      checksum = null;
+
       bits.ReadGuid(out language);
       bits.ReadGuid(out vendor);
       bits.ReadGuid(out doctype);
+      bits.ReadGuid (out checksumAlgo);
+      bits.ReadInt32 (out checksumSize);
+      bits.ReadInt32 (out injectedSourceSize);
+
+      if (checksumSize > 0) {
+        checksum = new byte [checksumSize];
+        bits.ReadBytes (checksum);
+      }
     }
 
     static Dictionary<string, int> LoadNameIndex(BitAccess bits, out int age, out Guid guid) {
@@ -512,13 +524,15 @@ namespace Microsoft.Cci.Pdb {
               Guid doctypeGuid = DocumentType.Text.ToGuid();
               Guid languageGuid = Guid.Empty;
               Guid vendorGuid = Guid.Empty;
+              Guid checksumAlgoGuid = Guid.Empty;
+              byte[] checksum = null;
               if (nameIndex.TryGetValue("/SRC/FILES/"+name.ToUpperInvariant(), out guidStream)) {
                 var guidBits = new BitAccess(0x100);
                 dir.streams[guidStream].Read(reader, guidBits);
-                LoadGuidStream(guidBits, out doctypeGuid, out languageGuid, out vendorGuid);
+                LoadGuidStream(guidBits, out doctypeGuid, out languageGuid, out vendorGuid, out checksumAlgoGuid, out checksum);
               }
 
-              PdbSource src = new PdbSource(/*(uint)ni,*/ name, doctypeGuid, languageGuid, vendorGuid);
+              PdbSource src = new PdbSource(/*(uint)ni,*/ name, doctypeGuid, languageGuid, vendorGuid, checksumAlgoGuid, checksum);
               checks.Add(ni, src);
               bits.Position += chk.len;
               bits.Align(4);

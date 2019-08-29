@@ -360,6 +360,8 @@ namespace Mono.Cecil.Pdb {
 				Language = source.language.ToLanguage (),
 				LanguageVendor = source.vendor.ToVendor (),
 				Type = source.doctype.ToType (),
+				HashAlgorithmGuid = source.checksumAlgorithm,
+				Hash = source.checksum
 			};
 			documents.Add (name, document);
 			return document;
